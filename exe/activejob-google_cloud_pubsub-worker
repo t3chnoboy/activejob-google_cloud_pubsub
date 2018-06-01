@@ -24,6 +24,10 @@ worker_args = parser.define_by_keywords(
   }
 )
 
+parser.on '--[no-]threads' do |o|
+  worker_args[:use_threads] = o
+end
+
 pubsub_args = parser.define_by_keywords(
   {},
   Google::Cloud::Pubsub.method(:new),

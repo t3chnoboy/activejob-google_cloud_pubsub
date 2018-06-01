@@ -13,38 +13,51 @@ module ActiveJob
 
       using PubsubExtension
 
-      def initialize(queue: 'default', min_threads: 0, max_threads: Concurrent.processor_count, pubsub: Google::Cloud::Pubsub.new, logger: Logger.new($stdout))
+      def initialize(queue: 'default', min_threads: 0, max_threads: Concurrent.processor_count, use_threads: true, pubsub: Google::Cloud::Pubsub.new, logger: Logger.new($stdout))
         @queue_name  = queue
         @min_threads = min_threads
         @max_threads = max_threads
+        @use_threads = use_threads
         @pubsub      = pubsub
         @logger      = logger
       end
 
       def run
-        pool = Concurrent::ThreadPoolExecutor.new(min_threads: @min_threads, max_threads: @max_threads, max_queue: -1)
+        if @use_threads
+          pool = Concurrent::ThreadPoolExecutor.new(min_threads: @min_threads, max_threads: @max_threads, max_queue: -1)
+        else
+          @logger&.warn "Running without threads"
+        end
 
         @pubsub.subscription_for(@queue_name).listen {|message|
           @logger&.info "Message(#{message.message_id}) was received."
 
-          begin
-            Concurrent::Promise.execute(args: message, executor: pool) {|msg|
-              process_or_delay msg
-            }.rescue {|e|
-              @logger&.error e
-            }
-          rescue Concurrent::RejectedExecutionError
-            Concurrent::Promise.execute(args: message) {|msg|
-              msg.delay! 10.seconds.to_i
-
-              @logger&.info "Message(#{msg.message_id}) was rescheduled after 10 seconds because the thread pool is full."
-            }.rescue {|e|
-              @logger&.error e
-            }
+          if @use_threads
+            run_concurrent message, pool
+          else
+            process message
           end
         }.start
 
         sleep
+      end
+
+      def run_concurrent(message, pool)
+        begin
+          Concurrent::Promise.execute(args: message, executor: pool) {|msg|
+            process_or_delay msg
+          }.rescue {|e|
+            @logger&.error e
+          }
+        rescue Concurrent::RejectedExecutionError
+          Concurrent::Promise.execute(args: message) {|msg|
+            msg.delay! 10.seconds.to_i
+
+            @logger&.info "Message(#{msg.message_id}) was rescheduled after 10 seconds because the thread pool is full."
+          }.rescue {|e|
+            @logger&.error e
+          }
+        end
       end
 
       def ensure_subscription
