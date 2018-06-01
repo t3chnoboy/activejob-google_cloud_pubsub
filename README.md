@@ -120,6 +120,13 @@ Maximum number of worker threads.
 
 Default: number of logical cores
 
+#### `--no-use_threads`
+
+Do not use threads, process each message using raw pub/sub event
+callback.
+
+Default: use threads
+
 #### `--project_id=PROJECT_ID`, `--credentials=KEYFILE_PATH`
 
 Credentials of Google Cloud Platform. Please see [the document](https://github.com/GoogleCloudPlatform/google-cloud-ruby/blob/master/AUTHENTICATION.md) for details.
