@@ -15,8 +15,8 @@ module ActiveJob
       def initialize(queue: 'default', min_threads: 0, pubsub: Google::Cloud::Pubsub.new, logger: Logger.new($stdout))
         @queue_name  = queue
         @min_threads = min_threads
-        @max_threads = max_threads
-        @use_threads = use_threads
+        @max_threads = 1
+        @use_threads = true
         @pubsub      = pubsub
         @logger      = logger
       end
