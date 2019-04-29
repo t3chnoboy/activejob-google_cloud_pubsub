@@ -18,10 +18,7 @@ end
 worker_args = parser.define_by_keywords(
   {},
   ActiveJob::GoogleCloudPubsub::Worker.instance_method(:initialize),
-  {
-    min_threads: Integer,
-    max_threads: Integer
-  }
+  {}
 )
 
 parser.on '--[no-]threads' do |o|
